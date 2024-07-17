@@ -42,52 +42,13 @@ void matrix_mult(int rows_a, int column_a, float mat_a[rows_a][column_a], int ro
     }
 }
 
-/* Вращение вокруг оси X */
-
-void rot_x(float input_matrix[3][1], double a, float output_matrix[3][1]) {
-
-    float matrix_rotation[3][3] = { {1, 0, 0}, {0, cos(a), -sin(a)}, {0, sin(a), cos(a)} };
-
-    matrix_mult(3, 3, matrix_rotation, 3, 1, input_matrix, output_matrix);
-
-    for (int i=0; i<3; i++) {
-        for (int j=0; j<1; j++) {
-            //printf("ROT X: output_matrix[%d][%d]= %lf\n", i, j, output_matrix[i][j]);
-        }
-    }
-
-
-}
-
-/* Вращение вокруг оси Y */
-
-void rot_y(float input_matrix[3][1], float a, float output_matrix[3][1]) {
-
-    float matrix_rotation[3][3] = { {cos(a), 0, sin(a)}, {0, 1, 0}, {-sin(a), 0, cos(a)} };
-
-    matrix_mult(3, 3, matrix_rotation, 3, 1, input_matrix, output_matrix);
-
-
-}
-
-/* Вращение вокруг оси Z */
-
-void rot_z(float input_matrix[3][1], float a, float output_matrix[3][1]) {
-
-    float matrix_rotation[3][3] = { {cos(a), -sin(a), 0}, {sin(a), cos(a), 0}, {0, 0, 1} };
-
-    matrix_mult(3, 3, matrix_rotation, 3, 1, input_matrix, output_matrix);
-
-
-}
-
 /* ===================================== */
 /*             ОБЪЕМНЫЕ ТЕЛА             */
 /* ===================================== */
 
-
 struct Cube{
 
+    int count_dots;
     float dots[8][3][1];
     int side;
     float angle_rot;
@@ -97,6 +58,8 @@ struct Cube{
 
 void initCube_Cube(struct Cube* cb) {
     int s = round(cb->side/2);
+    cb->count_dots = 8;
+    cb->angle_rot = 0.1;
 
     cb->dots[0][0][0] = -s;
     cb->dots[0][1][0] = -s;
@@ -134,6 +97,62 @@ void initCube_Cube(struct Cube* cb) {
 
 
 
+/* Вращение вокруг оси X */
+
+void rot_x(struct Cube* cb) {
+    float output_matrix[8][3][1];
+    float a = cb->angle_rot;
+    float matrix_rotation[3][3] = { {1, 0, 0}, {0, cos(a), -sin(a)}, {0, sin(a), cos(a)} };
+
+    for (int p=0; p <8; p++) {
+        matrix_mult(3, 3, matrix_rotation, 3, 1, cb->dots[p], output_matrix[p]);
+        for (int i=0; i<3; i++) {
+            cb->dots[p][i][0] = output_matrix[p][i][0];
+        }
+    }
+
+
+}
+
+/* Вращение вокруг оси Y */
+
+
+void rot_y(struct Cube* cb) {
+    float output_matrix[8][3][1];
+
+    float a = cb->angle_rot;
+
+    float matrix_rotation[3][3] = { {cos(a), 0, sin(a)}, {0, 1, 0}, {-sin(a), 0, cos(a)} };
+
+    for (int p=0; p <8; p++) {
+        matrix_mult(3, 3, matrix_rotation, 3, 1, cb->dots[p], output_matrix[p]);
+        for (int i=0; i<3; i++) {
+            cb->dots[p][i][0] = output_matrix[p][i][0];
+        }
+    }
+
+}
+
+/* Вращение вокруг оси Z */
+
+void rot_z(struct Cube* cb) {
+    float output_matrix[8][3][1];
+
+    float a = cb->angle_rot;
+
+    float matrix_rotation[3][3] = { {cos(a), -sin(a), 0}, {sin(a), cos(a), 0}, {0, 0, 1} };
+
+    for (int p=0; p <8; p++) {
+        matrix_mult(3, 3, matrix_rotation, 3, 1, cb->dots[p], output_matrix[p]);
+        for (int i=0; i<3; i++) {
+            cb->dots[p][i][0] = output_matrix[p][i][0];
+        }
+    }
+
+
+}
+
+
 /* ===================================== */
 /*                 ЭКРАН                 */
 /* ===================================== */
@@ -148,8 +167,7 @@ struct Display {
     char backgroud;
 
     void (*update)(struct Display*);
-    void (*drawObj)(struct Display*, int count_dots, float object[][3][1]);
-    void (*show)(struct Display*);
+    void (*drawObj)(struct Display*, float object[][3][1]);
     void (*drawLine)(struct Display*, int x0, int y0, int x1, int y1);
 
 };
@@ -166,53 +184,44 @@ void update_Display(struct Display* dp) {
     }
 }
 
-void drawObj_Display(struct Display* dp, int cout_dots, float obj[cout_dots][3][1]) {
+void drawObj_Display(struct Display* dp, struct Cube* cb) {
 
-    for (int i=0; i<cout_dots; i++) {
+    for (int i=0; i<cb->count_dots-1; i++) {
 
         //printf("i: %d\n", i);
 
         // точка 0
 
-        int x0 = (int) (obj[i][0][0] + round(dp->width/2));
-        int y0 = (int) (obj[i][1][0] + round(dp->height/2));
+        int x0 = (int) (cb->dots[i][0][0] + round(dp->width/2));
+        int y0 = (int) (cb->dots[i][1][0] + round(dp->height/2));
         //printf("x0:%d \t y0: %d\n\n", x0, y0);
 
         // точка 1
-        int x1 = (int) (obj[i+1][0][0] + round(dp->width/2));
-        int y1 = (int) (obj[i+1][1][0] + round(dp->height/2));
+        int x1 = (int) (cb->dots[i+1][0][0] + round(dp->width/2));
+        int y1 = (int) (cb->dots[i+1][1][0] + round(dp->height/2));
         //printf("x1:%d \t y1: %d\n", x1, y1);
+
         dp->drawLine(dp, x0, y0, x1, y1); // линия между точками 0 и 1
 
 
+
+
         // точка 2
-        int x2 = (int) (obj[cout_dots-1-i][0][0] + round(dp->width/2));
-        int y2 = (int) (obj[cout_dots-1-i][1][0] + round(dp->height/2));
+        int x2 = (int) (cb->dots[cb->count_dots-1-i][0][0] + round(dp->width/2));
+        int y2 = (int) (cb->dots[cb->count_dots-1-i][1][0] + round(dp->height/2));
         //printf("x2:%d \t y2: %d\n", x2, y2);
         dp->drawLine(dp, x0, y0, x2, y2); // линия между точками 0 и 2
 
         // точка 3
         if (i==0 || i==4) {
-            int x3 = (int) (obj[i+3][0][0] + round(dp->width/2));
-            int y3 = (int) (obj[i+3][1][0] + round(dp->height/2));
+            int x3 = (int) (cb->dots[i+3][0][0] + round(dp->width/2));
+            int y3 = (int) (cb->dots[i+3][1][0] + round(dp->height/2));
             //printf("x3:%d \t y3: %d\n", x3, y3);
-            dp->drawLine(dp, x0, y0, x3 , y3); // линия между точками 0 и 3
+            dp->drawLine(dp, x0, y0, x3, y3); // линия между точками 0 и 3
         }
-
-        //dp->show(dp);
 
     }
 
-}
-
-void show_Display(struct Display* dp) {
-
-    for (int i=0; i<dp->width; i++) {
-        for (int j=0; j<dp->height; j++) {
-            printf("%c", dp->data[i][j]);
-        }
-        printf("\n");
-    }
 }
 
 void show_Screen(struct Display* dp) {
@@ -291,8 +300,6 @@ void drawLine_Display(struct Display* dp, int x0, int y0, int x1, int y1) {
     }
 }
 
-// char update_display(char display, )
-
 
 int main()
 {
@@ -314,7 +321,6 @@ int main()
     dp.update= &update_Display;
     dp.drawObj = &drawObj_Display;
     dp.drawLine = &drawLine_Display;
-    dp.show = &show_Display;
 
 
     dp.width=39;
@@ -330,33 +336,21 @@ int main()
 
     cb.initCube(&cb);
 
-    float angle = 0;
     long long count = 100000000000;
     while (count!=0) {
         dp.update(&dp);
 
-        float rotated_cb[8][3][1];
-        for (int pt=0; pt < 8; pt++) {
-            float a[3][1] = { {cb.dots[pt][0][0]}, {cb.dots[pt][1][0]}, {cb.dots[pt][2][0]} };
+        rot_y(&cb);
+        rot_x(&cb);
+        rot_z(&cb);
 
-            rot_y(cb.dots[pt], angle, rotated_cb[pt]);
-
-            float b[3][1] = { {rotated_cb[pt][0][0]}, {rotated_cb[pt][1][0]}, {rotated_cb[pt][2][0]} };
-            rot_x(rotated_cb[pt], angle, rotated_cb[pt]);
-
-
-        }
-
-        dp.drawObj(&dp, 8, rotated_cb);
+        dp.drawObj(&dp, &cb);
         show_Screen(&dp);
 
 
 
         Sleep(100);
-        Sleep(50);
-        angle += 0.1;
         count--;
-
         }
     return 0;
 }
